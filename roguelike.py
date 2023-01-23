@@ -20,7 +20,7 @@ class SimNode(AbstractBaseClass):
     
     """
     SimNode instances wrap sets of simulation state variables.
-    They are the nodeic components out of which complex simulations are assembled.
+    They are the most fine-grained components out of which complex simulations are assembled.
     """
     
     @abstractmethod
@@ -56,15 +56,28 @@ class SimArrow(AbstractBaseClass):
         pass
 
 
-class SimGraph(AbstractBaseClass):
+class SimGraph:
 
     """
     A SimGraph is composed of a set of connected SimArrow instances, and may include cycles. If the graph includes cycles then the causal chain will stop
     once chain of atom updates comes back around to the first atom updated.
     """
 
-    pass
+    ## Status: stub class
+    ## ToDo: 
+    ##   - cycle checking
+    ##   - conflict / deadlock checking (consider three gears all connected, none should be able to actually turn)
+    ##   - "intelligent" arrow updates, don't update down a dead causal chain
 
+    def __init__(self):
+        self.arrows = list()
+
+    def add_arrow(self, arrow:SimArrow):
+        self.arrows.append(arrow)
+
+    def update(self) -> bool:
+        for a in self.arrows:
+            a.update()
 
 
   ## ############## ##
