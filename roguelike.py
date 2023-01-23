@@ -9,131 +9,154 @@ Authors:
 """
 
 
-from __future__ import annotations
+import random
 
-
-from typing import Set
-from typing import Optional
 
 from abc import ABC as AbstractBaseClass
 from abc import abstractmethod
-from functools import lru_cache
 
 
-class SimVariable:
-
+class SimNode(AbstractBaseClass):
+    
     """
+    SimNode instances wrap sets of simulation state variables.
+    They are the nodeic components out of which complex simulations are assembled.
     """
     
-    value: object
-
-    def __init__(self, value, tags):
-        self.value = value
-        self.tags = tags ## "input", "output" or "internal"
-
-
-class SimAtom(AbstractBaseClass):
-
-    """
-    SimAtom instances wrap sets of simulation state variables. They are the atomic components out of which complex simulations are assembled.
-    The objects contained in internal and output variables should ONLY be change value if the `update` method is called.
-    """
-
-    ## ToDo:
-    ##   - Write wrapper class that allows SimAtoms to negotiate a global update strategy using some number of feed-forward and feed-back operations.
-    ##   - SimAtom to act as a facade for a target instance, where the facade.update() method may be simpler/faster than target.update() but have the
-    ##   same input/output signature, so that target.update() will only be run if target.variables_internal is read out.
-
-    variables: List[SimVariable]
-
-    @lru_cache(1)
-    def get_variables_input(self) -> Set[SimVariable]:
-        return frozenset(filter(lambda v: "input" in v.tags, self.variables))
-
-    @lru_cache(1)
-    def get_variables_output(self) -> Set[SimVariable]:
-        return frozenset(filter(lambda v: "output" in v.tags, self.variables))
-
-    @lru_cache(1)
-    def get_variables_internal(self) -> Set[SimVariable]:
-        return frozenset(filter(lambda v: "internal" in v.tags, self.variables))
-
     @abstractmethod
-    def update(self) -> None:
+    def update(self) -> bool:
         """
-        Update variables_output and variables_internal of the object to reflect changes to the input variables.
-        Do NOT change any of the values in variables_input or change their state in any way.
+        When a SimNode's update() method is called, some of the variables belonging to the node can be updated to reflect changes made to its
+        input variables.
         """
         pass
 
 
-# class SimGraph:
-#     @abstractmethod
-#     def attach(self, other) -> Optional[SimAtom]:
-#         """
-#         Implementations should do exactly one of the following for any given value of `other`:
-#         0. Return Optional.empty()
-#         1. Return Optional.of(obj) where `obj` is a new SimAtom instance containing all of the variables belonging to both of the input objects.
-#         """
-#         pass
+class SimArrow(AbstractBaseClass):
+    
+    """
+    Arrows represent unidirection causal relationships between nodes.
+    All arrows must implement an 'effect' which copies values from the source to the target.
+    """
+    
+    source: SimNode
+    target: SimNode
+
+    def update(self) -> bool:
+        if self.effect():
+            return self.target.update()
+        return False
+
+    @abstractmethod
+    def effect(self) -> bool:
+        """
+        The effect method should implement the causal relationship represented by the arrow. This means copying the value of at least one of the variables
+        of the source node into a variable in the target node, but not vice versa.
+        """
+        pass
+
+
+class SimGraph(AbstractBaseClass):
+
+    """
+    A SimGraph is composed of a set of connected SimArrow instances, and may include cycles. If the graph includes cycles then the causal chain will stop
+    once chain of atom updates comes back around to the first atom updated.
+    """
+
+    pass
 
 
 
+  ## ############## ##
+ ## ## Examples ## ##
+## ############## ##
 
-## ToDo: think through how SimAtom instances can be instantiated & deleted at run time. Should there be a special class to mediate this?
-## ToDo: Seperate folder for examples 
-## ToDo: Seperate folder for tests 
+# ToDo:
+#   - move examples into a separate file.
+#   - think through how to model causal graphs with closed loops. E.g. gears arranged in a ring.
 
-class Gear(SimAtom):
-
-    def __init__(self, teeth):
-        self.teeth = teeth
-        self.angle = SimVariable(0, {"internal"})
-        self.teeth_moved = SimVariable(0, {"input", "output"})
-        self.variables = {self.teeth_moved, self.angle}
-
-    def update(self):
-        self.angle.value += (360*self.teeth_moved.value/self.teeth)%360
-
-
-## This shouldn't exist, there has to be some way to compose individual gears to obtain this behaviour
-class GearPair(SimAtom):
+class Gear(SimNode):
     
     def __init__(self, teeth):
+        
+        ## static parameters
         self.teeth = teeth
-        self.angle = SimVariable(0, {"internal"})
-        self.teeth_moved_0 = SimVariable(0, {"input", "output"})
-        self.teeth_moved_1 = SimVariable(0, {"input", "output"})
-        self.variables = {self.teeth_moved, self.angle}
-
-    def update(self):
-        angle_0 += (360*self.teeth_moved_0.value/self.teeth)%360
-        angle_1 += (360*self.teeth_moved_1.value/self.teeth)%360
-        self.teeth_moved_0.value = None
-        self.teeth_moved_1.value = None
-        ## Doesn't work. We need a flag to tell us which gear was turned.
-        ## Back to the drawing board.
+        
+        ## variables
+        self.angle = 0
+        self.teeth_moved = 0
+        self.broken = False
+        self.probability_of_breaking_per_tooth_click = 1/100
     
+    def update(self) -> bool:
+        if self.broken:
+            return False
+        teeth_moved = 0
+        for i in range(self.teeth_moved):
+            self.broken = random.random() < self.probability_of_breaking_per_tooth_click 
+            if self.broken:
+                break
+            teeth_moved += 1
+        self.angle = (360*teeth_moved/self.teeth)%360
+        return True
+
+
+class GearPair(SimArrow):
+
+    def __init__(self, source:Gear, target:Gear):
+        self.source = source
+        self.target = target
+
+    def effect(self) -> bool:
+        if not self.source.broken:
+            self.target.teeth_moved = self.source.teeth_moved
+            return True
+        return False
+
+
+class GearTrain(SimNode):
+    
+    def __init__(self, start_gear:Gear):
+        self.teeth_moved = 0
+        self.gears = [start_gear,]
+        self.arrows = []
+    
+    def add_gear(self, gear):
+        self.arrows.append(GearPair(self.gears[-1], gear))
+        self.gears.append(gear)
+    
+    def update(self):
+        self.gears[0].update()
+        for a in self.arrows:
+            if not a.update():
+                break
 
 
 def gear_example():
-    g1 = Gear(10)
-    g2 = Gear(20)
-    g3 = Gear(10)
-    g1.teeth_moved.value = 5
-    g1.update()
-    print(g1.angle.value)
-    g2.teeth_moved.value = g1.teeth_moved.value
-    g2.update()
-    print(g2.angle.value)
-    g3.teeth_moved.value = g2.teeth_moved.value
-    g3.update()
-    print(g3.angle.value)
+    g0 = Gear(10)
+    g1 = Gear(20)
+    g2 = Gear(10)
+    gtrain = GearTrain(g0)
+    gtrain.add_gear(g1)
+    gtrain.add_gear(g2)
+    g0.teeth_moved = 5
+    gtrain.update()
+    print("1) all gears OK, turning 5 teeth")
+    print(g0.angle, g0.broken)
+    print(g1.angle, g1.broken)
+    print(g2.angle, g2.broken)
 
-
-def main():
-    gear_example()
-
+    g0.angle = 0
+    g1.angle = 0
+    g2.angle = 0
+    g0.teeth_moved = 5
+    g1.broken = True
+    gtrain.update()
+    print("\n2) middle gear is broken, turning 5 teeth")
+    print(g0.angle, g0.broken)
+    print(g1.angle, g1.broken)
+    print(g2.angle, g2.broken)
+    
 
 if __name__ == "__main__":
     main()
