@@ -27,6 +27,7 @@ class Gear(SimNode):
             if self.broken:
                 break
             teeth_moved += 1
+        self.teeth_moved = teeth_moved
         self.angle = (360*teeth_moved/self.teeth)%360
         return True
 
