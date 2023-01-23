@@ -13,7 +13,7 @@ class Gear(SimNode):
         self.teeth = teeth
 
         ## variables
-        self.angle = 0
+        self.angle = 0 ## should be in the range [-180,180]
         self.teeth_moved = 0
         self.direction = 1 ## 1=clockwise. -1=anticlockwise
         self.broken = False
@@ -31,8 +31,8 @@ class Gear(SimNode):
         self.teeth_moved = teeth_moved
         angle_delta = self.direction*(360*teeth_moved/self.teeth)
         angle = (self.angle+angle_delta)%360
-        if angle < 0:
-            angle += 360
+        if 180 < angle:
+            angle += -360
         self.angle = angle
         return True
 

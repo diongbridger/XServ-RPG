@@ -19,7 +19,7 @@ def test_geartrain_implementation_in_simnode():
     gtrain.update()
     print()
     assert (g0.angle, g0.direction) == (180,  1)
-    assert (g1.angle, g1.direction) == (270, -1)
+    assert (g1.angle, g1.direction) == (-90, -1)
     assert (g2.angle, g2.direction) == (180,  1)
 
     ## 2) Middle gear is broken, turning 5 teeth.
