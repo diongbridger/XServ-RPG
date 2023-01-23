@@ -33,6 +33,8 @@ class Gear(SimNode):
         angle = (self.angle+angle_delta)%360
         if 180 < angle:
             angle += -360
+        elif angle < -180:
+            angle += 360
         self.angle = angle
         return True
 
