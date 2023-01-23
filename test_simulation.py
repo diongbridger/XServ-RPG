@@ -34,12 +34,10 @@ def gear_train(gear1, gear2, gear3):
     return gtrain
 
 def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
-    ## 1) All gears OK, turning 5 teeth.
+    # NDH: I had to keep these two lines up here or this test would fail for some reason
     gear_train.teeth_moved = 5
     gear_train.update()
-    assert (gear1.angle, gear1.direction, gear1.broken) == (180,  1, False)
-    assert (gear2.angle, gear2.direction, gear2.broken) == (-90, -1, False)
-    assert (gear3.angle, gear3.direction, gear3.broken) == (180,  1, False)
+
 
     ## 2) Middle gear is broken, turning 5 teeth.
     gear1.angle = 0
@@ -72,3 +70,11 @@ def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
     assert gear3.get_state_variables() == gear3_state_before
     assert gear3.get_input_variables() == gear3_input_before
     ## notice direction switched even though gear2 did not rotate, since direction is an input variable rather than a state variable
+
+def test_gears_turn_then_update_angle_and_direction(gear1, gear2, gear3, gear_train): #NDH: code duplication in test signature means I should probably group these
+    ## 1) All gears OK, turning 5 teeth.
+    gear_train.teeth_moved = 5
+    gear_train.update()
+    assert (gear1.angle, gear1.direction, gear1.broken) == (180,  1, False)
+    assert (gear2.angle, gear2.direction, gear2.broken) == (-90, -1, False)
+    assert (gear3.angle, gear3.direction, gear3.broken) == (180,  1, False)
