@@ -10,7 +10,7 @@ from gears import Gear, GearTrain
 @pytest.fixture
 def gear1():
     gear = Gear(10)
-    gear.probability_of_breaking_per_tooth_click = 0 # having to move this into declaration feels like anti pattern
+    gear.probability_of_breaking_per_tooth_click = 0 # NDH: having to move this into declaration feels like anti pattern
     return gear
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def gear_train(gear1, gear2, gear3):
     gtrain = GearTrain()
     gtrain.add_gear(gear1)
     gtrain.add_gear(gear2)
-    gtrain.add_gear(gear3)
+    gtrain.add_gear(gear3) # NDH: i think this reveals we should add a *args to the aggregate constructors or otherwise abstract GearTrains representation
     return gtrain
 
 def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
@@ -58,6 +58,10 @@ def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
     gear3_input_before = gear3.get_input_variables()
 
     assert gear_train.update()
+    # NDH: I see in the implementation update this returns False if unsuccessful.
+    # It's more pythonic to define an exception "UpdateException" that can be thrown from those classes.
+    # That way we can catch it where we need to without doing boolean compares. This is especially useful when we start working with try catch game loop.
+
     assert (gear1.angle, gear1.direction, gear1.broken) == (180, 1, False)
     assert (gear2.angle, gear2.direction, gear2.broken) == (0,  -1, True)
     assert (gear3.angle, gear3.direction, gear3.broken) == (0,   1, False) ## gear should not break if turned by 0 teeth.
