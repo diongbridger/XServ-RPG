@@ -4,55 +4,77 @@
 import pytest
 
 from gears import Gear, GearTrain
-# codify gear example into a test
+# separate tests for readability
+# arrange, act, assert
 
-def test_geartrain_implementation_in_simnode():
-    g0 = Gear(10)
-    g1 = Gear(20)
-    g2 = Gear(10)
+@pytest.fixture
+def gear1():
+    gear = Gear(10)
+    gear.probability_of_breaking_per_tooth_click = 0 # NDH: having to move this into declaration feels like anti pattern
+    return gear
 
-    ## eliminate chance so test is repeatable
-    g0.probability_of_breaking_per_tooth_click = 0
-    g1.probability_of_breaking_per_tooth_click = 0
-    g2.probability_of_breaking_per_tooth_click = 0
+@pytest.fixture
+def gear2():
+    gear = Gear(20)
+    gear.probability_of_breaking_per_tooth_click = 0
+    return gear
 
-    # make a gear train
+@pytest.fixture
+def gear3():
+    gear = Gear(10)
+    gear.probability_of_breaking_per_tooth_click = 0
+    return gear
+
+@pytest.fixture
+def gear_train(gear1, gear2, gear3):
     gtrain = GearTrain()
-    gtrain.add_gear(g0)
-    gtrain.add_gear(g1)
-    gtrain.add_gear(g2)
+    gtrain.add_gear(gear1)
+    gtrain.add_gear(gear2)
+    gtrain.add_gear(gear3) # NDH: i think this reveals we should add a *args to the aggregate constructors or otherwise abstract GearTrains representation
+    return gtrain
 
-    ## 1) All gears OK, turning 5 teeth.
-    gtrain.teeth_moved = 5
-    gtrain.update()
-    assert (g0.angle, g0.direction, g0.broken) == (180,  1, False)
-    assert (g1.angle, g1.direction, g1.broken) == (-90, -1, False)
-    assert (g2.angle, g2.direction, g2.broken) == (180,  1, False)
+def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
+    # NDH: I had to keep these two lines up here or this test would fail for some reason
+    gear_train.teeth_moved = 5
+    gear_train.update()
+
 
     ## 2) Middle gear is broken, turning 5 teeth.
-    g0.angle = 0
-    g1.angle = 0
-    g2.angle = 0
-    g0.direction = 1
-    g1.direction = 1
-    g2.direction = 1
-    g0.teeth_moved = 5
-    g1.probability_of_breaking_per_tooth_click = 1
+    gear1.angle = 0
+    gear2.angle = 0
+    gear3.angle = 0
+    gear1.direction = 1
+    gear2.direction = 1
+    gear3.direction = 1
+    gear1.teeth_moved = 5
+    gear2.probability_of_breaking_per_tooth_click = 1
 
     ## save state variables for comparison
-    g1_state_before = g1.get_state_variables()
-    g1_input_before = g1.get_input_variables()
-    g2_state_before = g2.get_state_variables()
-    g2_input_before = g2.get_input_variables()
+    gear2_state_before = gear2.get_state_variables()
+    gear2_input_before = gear2.get_input_variables()
+    gear3_state_before = gear3.get_state_variables()
+    gear3_input_before = gear3.get_input_variables()
 
-    assert gtrain.update()
-    assert (g0.angle, g0.direction, g0.broken) == (180, 1, False)
-    assert (g1.angle, g1.direction, g1.broken) == (0,  -1, True)  
-    assert (g2.angle, g2.direction, g2.broken) == (0,   1, False) ## gear should not break if turned by 0 teeth.
+    assert gear_train.update()
+    # NDH: I see in the implementation update this returns False if unsuccessful.
+    # It's more pythonic to define an exception "UpdateException" that can be thrown from those classes.
+    # That way we can catch it where we need to without doing boolean compares. This is especially useful when we start working with try catch game loop.
 
-    ## causal chain broken by g1, g2 should be unaffected
-    assert g1.get_state_variables() != g1_state_before ## g1 broke, but
-    assert g1.get_input_variables() != g1_input_before ## g1 update was attempted
-    assert g2.get_state_variables() == g2_state_before
-    assert g2.get_input_variables() == g2_input_before
-    ## notice direction switched even though g1 did not rotate, since direction is an input variable rather than a state variable
+    assert (gear1.angle, gear1.direction, gear1.broken) == (180, 1, False)
+    assert (gear2.angle, gear2.direction, gear2.broken) == (0,  -1, True)
+    assert (gear3.angle, gear3.direction, gear3.broken) == (0,   1, False) ## gear should not break if turned by 0 teeth.
+
+    ## causal chain broken by gear2, gear3 should be unaffected
+    assert gear2.get_state_variables() != gear2_state_before ## gear2 broke, but
+    assert gear2.get_input_variables() != gear2_input_before ## gear2 update was attempted
+    assert gear3.get_state_variables() == gear3_state_before
+    assert gear3.get_input_variables() == gear3_input_before
+    ## notice direction switched even though gear2 did not rotate, since direction is an input variable rather than a state variable
+
+def test_gears_turn_then_update_angle_and_direction(gear1, gear2, gear3, gear_train): #NDH: code duplication in test signature means I should probably group these
+    ## 1) All gears OK, turning 5 teeth.
+    gear_train.teeth_moved = 5
+    gear_train.update()
+    assert (gear1.angle, gear1.direction, gear1.broken) == (180,  1, False)
+    assert (gear2.angle, gear2.direction, gear2.broken) == (-90, -1, False)
+    assert (gear3.angle, gear3.direction, gear3.broken) == (180,  1, False)
