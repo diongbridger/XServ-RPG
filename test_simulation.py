@@ -9,15 +9,21 @@ from gears import Gear, GearTrain
 
 @pytest.fixture
 def gear1():
-    return Gear(10)
+    gear = Gear(10)
+    gear.probability_of_breaking_per_tooth_click = 0 # having to move this into declaration feels like anti pattern
+    return gear
 
 @pytest.fixture
 def gear2():
-    return Gear(20)
+    gear = Gear(20)
+    gear.probability_of_breaking_per_tooth_click = 0
+    return gear
 
 @pytest.fixture
 def gear3():
-    return Gear(10)
+    gear = Gear(10)
+    gear.probability_of_breaking_per_tooth_click = 0
+    return gear
 
 @pytest.fixture
 def gear_train(gear1, gear2, gear3):
@@ -28,11 +34,6 @@ def gear_train(gear1, gear2, gear3):
     return gtrain
 
 def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
-    ## eliminate chance so test is repeatable
-    gear1.probability_of_breaking_per_tooth_click = 0
-    gear2.probability_of_breaking_per_tooth_click = 0
-    gear3.probability_of_breaking_per_tooth_click = 0
-
     ## 1) All gears OK, turning 5 teeth.
     gear_train.teeth_moved = 5
     gear_train.update()
