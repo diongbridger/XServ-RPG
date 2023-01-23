@@ -15,8 +15,9 @@ class Gear(SimNode):
         ## variables
         self.angle = 0
         self.teeth_moved = 0
+        self.direction = 1 ## 1=clockwise. -1=anticlockwise
         self.broken = False
-        self.probability_of_breaking_per_tooth_click = 1/100
+        self.probability_of_breaking_per_tooth_click = 0 ## default 0 so as not to mess with unit tests
 
     def update(self) -> bool:
         if self.broken:
@@ -28,7 +29,11 @@ class Gear(SimNode):
                 break
             teeth_moved += 1
         self.teeth_moved = teeth_moved
-        self.angle = (360*teeth_moved/self.teeth)%360
+        angle_delta = self.direction*(360*teeth_moved/self.teeth)
+        angle = (self.angle+angle_delta)%360
+        if angle < 0:
+            angle += 360
+        self.angle = angle
         return True
 
 
@@ -40,6 +45,7 @@ class GearPair(SimArrow):
 
     def effect(self) -> bool:
         if not self.source.broken:
+            self.target.direction = -1*self.source.direction
             self.target.teeth_moved = self.source.teeth_moved
             return True
         return False
