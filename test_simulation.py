@@ -34,10 +34,7 @@ def gear_train(gear1, gear2, gear3):
     return gtrain
 
 def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
-    # NDH: I had to keep these two lines up here or this test would fail for some reason
-    gear_train.teeth_moved = 5
-    gear_train.update()
-
+    gear_train.teeth_moved = 5 ## Set input variable (probably not the cleanest way to do this - Dion)
 
     ## 2) Middle gear is broken, turning 5 teeth.
     gear1.angle = 0
