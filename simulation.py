@@ -17,6 +17,10 @@ from abc import abstractmethod
 
 from collections import defaultdict
 
+# ToDo:
+#   - move examples into a separate file.
+#   - think through how to model causal graphs with closed loops. E.g. gears arranged in a ring.
+
 
 class SimNode(AbstractBaseClass):
 
@@ -118,14 +122,3 @@ class SimGraph:
             for node, prior_state in nodes_to_prior_states:
                 node.__dict__.update(prior_state)
         return success
-
-
-
-
-## ############## ##
-## ## Examples ## ##
-## ############## ##
-
-# ToDo:
-#   - move examples into a separate file.
-#   - think through how to model causal graphs with closed loops. E.g. gears arranged in a ring.
