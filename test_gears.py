@@ -2,10 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-## ToDo:
-##   - Reduce line count somehow.
-
-
 import pytest
 
 from gears import Gear, GearTrain
@@ -94,15 +90,10 @@ def test_gears_turn_then_update_angle_and_direction(gear1, gear2, gear3, gear_tr
     
 def test_odd_numbered_circular_train_locks_up(gear1, gear2, gear3, gear_train_three_gears_ring):
     gear_train = gear_train_three_gears_ring
-    print(gear_train.gears)
-    print(gear_train.sim_graph.arrows)
     gear_train.teeth_moved = 5
     gear1_state_prior = gear1.get_state_variables()
     gear2_state_prior = gear2.get_state_variables()
     gear3_state_prior = gear3.get_state_variables()
-    print(gear1_state_prior)
-    print(gear2_state_prior)
-    print(gear3_state_prior)
     assert not gear_train.update() ## we expect this to fail because odd-numbered circular gear trains lock up
     assert gear1_state_prior == gear1.get_state_variables()
     assert gear2_state_prior == gear2.get_state_variables()
