@@ -83,11 +83,21 @@ class GearTrain:
         self.teeth_moved = 0
         self.sim_graph = SimGraph()
 
+    def _append_gear(self, gear):
+        if gear not in self.gears:
+            self.gears.append(gear)
+
     def add_gear(self, gear):
-        self.gears.append(gear)
+        self._append_gear(gear)
         if 2<=len(self.gears):
             gp = GearPair(self.gears[-2], self.gears[-1])
             self.sim_graph.add_arrow(gp)
+
+    def add_gear_pair(self, source_gear, target_gear):
+        self._append_gear(source_gear)
+        self._append_gear(target_gear)
+        gp = GearPair(source_gear, target_gear)
+        self.sim_graph.add_arrow(gp)
 
     def update(self):
         self.gears[0].teeth_moved = self.teeth_moved
