@@ -18,12 +18,6 @@ from abc import abstractmethod
 from collections import defaultdict
 
 
-# ToDo:
-#   [x] Move examples into a separate file.
-#   [x] Think through how to model causal graphs with closed loops. E.g. gears arranged in a ring.
-#   [ ] Implement layered SimGraphs & "graphs of graphs" to represent simulation at varying levels of abstraction.
-#   [ ] Support 'merging' non-circular causal paths
-
 
 class GraphUpdateException(Exception):
     """
