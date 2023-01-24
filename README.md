@@ -8,8 +8,12 @@ The current main goal is to write enough of the framework to enable a complete d
 ## Running Tests
 Tests are run using pytest. To run tests, run `pip install pytest` in your venv and run `pytest .`
 
+## Generating documentation
+Documentation is generated with the pdoc package. Currently requires running `pdoc --html <package name>` for each package so this can be improved.
+
 ### TODO
  - Move tests to own folder
     - Package simulation modules
+ - Move pdoc into a github action so it runs on approved PR
  - SciFi Bounty Hunter Demo Game
     - TUI/GUI for playing the game instead of just testing it.

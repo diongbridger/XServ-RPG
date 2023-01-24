@@ -17,6 +17,10 @@ from abc import abstractmethod
 
 from collections import defaultdict
 
+# ToDo:
+#   - move examples into a separate file.
+#   - think through how to model causal graphs with closed loops. E.g. gears arranged in a ring.
+
 
 class SimNode(AbstractBaseClass):
 
@@ -94,38 +98,31 @@ class SimGraph:
             if arrow.target == a.source:
                 self.arrow_to_arrows[arrow].append(a)
         self.arrows.append(arrow)
-        
+
     def update(self) -> bool:
         arrow_stack = [self.starting_arrow,]
         nodes_to_prior_states = dict()
-        success = True
         self.starting_arrow.source.update()
-        while arrow_stack and success:
-            arrow = arrow_stack.pop()
-            source = arrow.source
-            target = arrow.target
-            nodes_to_prior_states[source] = source.get_state_variables()
-            target_prior_state = nodes_to_prior_states.get(target)
-            chain_done = not arrow.update()
-            if target_prior_state:
-                success = target_prior_state == target.get_state_variables()
-            else:
-                arrow_stack.extend(self.arrow_to_arrows[arrow])
-            if chain_done:
-                break
-        if not success:
-            ## restore all nodes to prior state
-            for node, prior_state in nodes_to_prior_states:
-                node.__dict__.update(prior_state)
-        return success
+        while arrow_stack:
+            try:
+                arrow = arrow_stack.pop()
+                source = arrow.source
+                target = arrow.target
+                nodes_to_prior_states[source] = source.get_state_variables()
+                target_prior_state = nodes_to_prior_states.get(target)
+                chain_done = not arrow.update()
+                if target_prior_state:
+                    if not target_prior_state == target.get_state_variables():
+                        raise UpdateException
+                else:
+                    arrow_stack.extend(self.arrow_to_arrows[arrow])
+                if chain_done:
+                    break
+            except UpdateException:
+                for node, prior_state in nodes_to_prior_states:
+                    node.__dict__.update(prior_state)
+                return False
+        return True
 
-
-
-
-## ############## ##
-## ## Examples ## ##
-## ############## ##
-
-# ToDo:
-#   - move examples into a separate file.
-#   - think through how to model causal graphs with closed loops. E.g. gears arranged in a ring.
+class UpdateException(Exception): # NDH: should probably be renamed to whatever "target_prior_state == target.get_state_variables()" catches in data model
+    pass
