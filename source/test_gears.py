@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 import pytest
 
 from gears import Gear, GearTrain
@@ -32,6 +33,16 @@ def gear_train(gear1, gear2, gear3):
     gtrain.add_gear(gear2)
     gtrain.add_gear(gear3) # NDH: i think this reveals we should add a *args to the aggregate constructors or otherwise abstract GearTrains representation
     return gtrain
+
+@pytest.fixture
+def gear_train_three_gears_ring(gear1, gear2, gear3):
+    gtrain = GearTrain()
+    gtrain.add_gear(gear1)
+    gtrain.add_gear(gear2)
+    gtrain.add_gear(gear3)
+    gtrain.add_gear_pair(gear3, gear1) ## close the loop
+    return gtrain
+
 
 def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
     gear_train.teeth_moved = 5 ## Set input variable (probably not the cleanest way to do this - Dion)
@@ -71,7 +82,20 @@ def test_geartrain_implementation_in_simnode(gear1, gear2, gear3, gear_train):
 def test_gears_turn_then_update_angle_and_direction(gear1, gear2, gear3, gear_train): #NDH: code duplication in test signature means I should probably group these
     ## 1) All gears OK, turning 5 teeth.
     gear_train.teeth_moved = 5
-    gear_train.update()
+    assert gear_train.update()
     assert (gear1.angle, gear1.direction, gear1.broken) == (180,  1, False)
     assert (gear2.angle, gear2.direction, gear2.broken) == (-90, -1, False)
     assert (gear3.angle, gear3.direction, gear3.broken) == (180,  1, False)
+
+    
+def test_odd_numbered_circular_train_locks_up(gear1, gear2, gear3, gear_train_three_gears_ring):
+    gear_train = gear_train_three_gears_ring
+    gear_train.teeth_moved = 5
+    gear1_state_prior = gear1.get_state_variables()
+    gear2_state_prior = gear2.get_state_variables()
+    gear3_state_prior = gear3.get_state_variables()
+    assert not gear_train.update() ## we expect this to fail because odd-numbered circular gear trains lock up
+    assert gear1_state_prior == gear1.get_state_variables()
+    assert gear2_state_prior == gear2.get_state_variables()
+    assert gear3_state_prior == gear3.get_state_variables()
+    

@@ -18,6 +18,15 @@ from abc import abstractmethod
 from collections import defaultdict
 
 
+
+class GraphUpdateException(Exception):
+    """
+    Represents an /unexpected/ failure during an update operation of a SimGraph.
+    """
+    pass
+
+
+
 class SimNode(AbstractBaseClass):
 
     """
@@ -45,8 +54,15 @@ class SimNode(AbstractBaseClass):
     @abstractmethod
     def get_input_variables(self) -> dict:
         """
+        Return a subset of self.__dict__ containing all variables considered to be 'input' variables.
         """
         pass
+
+    def get_variables(self) -> dict:
+        """
+        Return all simulation variables held by this instance.
+        """
+        return {**self.get_input_variables(), **self.get_state_variables()}
 
 
 class SimArrow(AbstractBaseClass):
@@ -60,6 +76,9 @@ class SimArrow(AbstractBaseClass):
     target: SimNode
 
     def update(self) -> bool:
+        """
+        Effect an update of the target node's state given the state of the input node.
+        """
         if self.effect():
             return self.target.update()
         return False
@@ -86,6 +105,9 @@ class SimGraph:
         self.arrow_to_arrows = defaultdict(list)
 
     def add_arrow(self, arrow:SimArrow) -> None:
+        """
+        Extend the graph with a new causal arrow.
+        """
         if None==self.starting_arrow:
             self.starting_arrow = arrow
         for a in self.arrows:
@@ -94,38 +116,37 @@ class SimGraph:
             if arrow.target == a.source:
                 self.arrow_to_arrows[arrow].append(a)
         self.arrows.append(arrow)
-        
+
     def update(self) -> bool:
+        """
+        Compute the next state of the graph given its current state. If we return False then no state variables of any SimNode in the graph should
+        change after we return. If we return True then all active causal arrows should have effected their changes before we exit.
+        """
         arrow_stack = [self.starting_arrow,]
-        nodes_to_prior_states = dict()
-        success = True
+        nodes_to_prior_states = {self.starting_arrow.source: self.starting_arrow.source.get_variables()}
         self.starting_arrow.source.update()
-        while arrow_stack and success:
+        success = True ## Using a flag rather than an exception as failure to update state is not necessarily an error.
+        while arrow_stack:
+            ## select target node to update
             arrow = arrow_stack.pop()
             source = arrow.source
             target = arrow.target
-            nodes_to_prior_states[source] = source.get_state_variables()
             target_prior_state = nodes_to_prior_states.get(target)
+            if not target_prior_state:
+                nodes_to_prior_states[target] = target.get_variables()
+            ## Perform update 
             chain_done = not arrow.update()
             if target_prior_state:
-                success = target_prior_state == target.get_state_variables()
+                success &= (target_prior_state == target.get_variables())
+                chain_done = True
             else:
                 arrow_stack.extend(self.arrow_to_arrows[arrow])
+            ## Undo all state changes if an inconsistency obtains
+            if not success:
+                ## Undo all state updates
+                for node, prior_state in nodes_to_prior_states.items():
+                    node.__dict__.update(prior_state)
+            ## Check for premature exit
             if chain_done:
                 break
-        if not success:
-            ## restore all nodes to prior state
-            for node, prior_state in nodes_to_prior_states:
-                node.__dict__.update(prior_state)
         return success
-
-
-
-
-## ############## ##
-## ## Examples ## ##
-## ############## ##
-
-# ToDo:
-#   - move examples into a separate file.
-#   - think through how to model causal graphs with closed loops. E.g. gears arranged in a ring.
